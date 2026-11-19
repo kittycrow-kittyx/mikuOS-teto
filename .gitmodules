@@ -1,0 +1,6 @@
+[submodule "mikuOS-thistle"]
+	path = mikuOS-thistle
+	url = https://github.com/kittycrow-kittyx/mikuOS-thistle.git
+[submodule "leek"]
+	path = leek
+	url = https://github.com/kittycrow-kittyx/leek.git
