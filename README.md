@@ -42,8 +42,8 @@ belong in `dist/mikuos` and are not committed.
 
 The whole-system build is not complete. Leek now stages the full canonical boot
 graph, including inherited Thistle and ThistleASM. It still needs language
-extensions for exceptions, captured async functions, undefined-sensitive values
-and explicit host capabilities, followed by a native OS boot ABI.
+extensions for exceptions, optional primitive values, indexed records, Promise
+continuations and explicit host capabilities, followed by a native OS boot ABI.
 
 The source job fails on unsupported constructs and uploads Bake diagnostics.
 It does not substitute a smaller kernel build or execute the OS in TypeScript.
