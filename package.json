@@ -1,0 +1,15 @@
+{
+  "name": "@kitty-crow/mikuos-teto",
+  "version": "0.1.0-dev.0",
+  "private": true,
+  "type": "module",
+  "description": "Canonical mikuOS TypeScript to modular WAT through Leek and Baguette.",
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "check": "bun leek/node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
+    "source": "bun scripts/generate.ts",
+    "compile": "bun scripts/compile.ts",
+    "build": "bun run source && bun run compile"
+  },
+  "engines": { "bun": ">=1.4.5" }
+}
