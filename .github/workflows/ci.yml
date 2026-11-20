@@ -1,0 +1,87 @@
+name: Operating system source and build validation
+
+on:
+  push:
+    branches: [main, 'refactor/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ORT_DISABLE_TELEMETRY: '1'
+
+jobs:
+  source:
+    name: Transpile source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.5
+      - name: Install pinned dependencies
+        run: bun run setup
+      - name: Type-check build scripts
+        run: bun run check
+      - name: Strict Code Guards
+        run: bun run --cwd leek guards
+      - name: Transpile canonical source
+        run: bun run source
+      - name: Upload lowering diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: mikuos-lowering-diagnostics
+          path: |
+            leek/build/wasm/source-manifest.json
+            leek/build/wasm/**/bake-report.json
+          if-no-files-found: ignore
+      - name: Upload generated source
+        uses: actions/upload-artifact@v6
+        with:
+          name: mikuos-generated-source
+          path: |
+            src/
+            abi/
+            canonical-source.json
+            mikuos.manifest.json
+            SHA256SUMS
+            build/mikuos-base.tar.gz
+          if-no-files-found: error
+
+  compile:
+    name: Compile
+    needs: source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.5
+      - name: Install pinned dependencies
+        run: bun run setup
+      - name: Remove old generated source
+        run: rm -rf src abi
+      - name: Download generated source
+        uses: actions/download-artifact@v7
+        with:
+          name: mikuos-generated-source
+          path: .
+      - name: Compile modular WAT
+        run: bun run compile
+      - name: Verify committed source matches regeneration
+        run: |
+          git add -A -- src abi canonical-source.json mikuos.manifest.json SHA256SUMS
+          git diff --cached --exit-code
+          test -z "$(git ls-files -- dist '*.wasm')"
