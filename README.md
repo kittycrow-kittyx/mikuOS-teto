@@ -1,68 +1,56 @@
-# MIKU
+# mikuOS Teto
 
 **MIKU**: MIKU Is Not the Kernel; it's Userspace.
 
-mikuOS (初音ミクOS) provides a Unix-like userspace with a common root image,
-accounts, shell, command set and THX executable support. Release 0.3 is styled
-**v｡三**.
+This repository builds the canonical mikuOS TypeScript graph through Leek,
+Bake and Baguette. Its only direct source pins are `mikuOS-thistle` and `leek`.
+The kernel comes from `mikuOS-thistle/thistle`; this repository contains no
+separate kernel or userspace implementation. The old `mikuOS` repository serves
+Pages and is outside this build.
 
-## Kernel branch
+The build follows Teto's two stages:
 
-`mikuOS-Thistle` pins [Thistle v2.2.1](https://github.com/kittycrow-kittyx/thistle/releases/tag/v2.2.1) at `76932c85c4db2eb481345aafe8611e6f53de9d85`.
-
-This branch imports the canonical kernel from the root `thistle` pin. Bun runs the hosted validation suite directly.
+1. Leek extends the canonical TypeScript graph, then invokes the pinned Baguette
+   compiler and its mandatory Bake stage. Baguette produces modular WAT and a
+   reference binary. Source generation checks hashes against the canonical
+   checkout and retains its `.thistle.base` userland unchanged.
+2. An independent job checks the source hashes, links Baguette's modular layout
+   and compiles it using the pinned Binaryen. The resulting binary must match
+   Baguette's reference binary byte for byte.
 
 ## Build
 
 ```sh
-git submodule update --init --recursive
-bun install --frozen-lockfile --ignore-scripts
-bun run build
+bun run setup
+bun run check
+bun run source
+bun run compile
 ```
 
-The build verifies the pinned Thistle source and type-checks direct imports from it and prepares the static browser files. See [build and generated files](docs/build.md).
+`bun run build` performs both stages. The production entry is fixed to canonical
+`src/main/boot.ts`; an isolated function or smaller entry cannot satisfy this
+build. Exact clean gitlinks are checked before either stage. No canonical
+TypeScript source is rewritten in place.
 
-## Run
+Successful generation writes modular source to `src/baseline`, ABI declarations
+to `abi/`, the original module hashes to `canonical-source.json`, pinned build
+metadata to `mikuos.manifest.json` and source checksums to `SHA256SUMS`.
+The unchanged userland is packaged in `build/mikuos-base.tar.gz`. Compiled binaries
+belong in `dist/mikuos` and are not committed.
 
-```sh
-bun mikuos.ts --kernel=thistle
-```
+## Current status
 
-The CLI and browser use the pinned Thistle kernel.
+The whole-system build is not complete. Leek now stages the full canonical boot
+graph, including inherited Thistle and ThistleASM. It still needs language
+extensions for exceptions, optional primitive values, indexed records, Promise
+continuations and explicit host capabilities, followed by a native OS boot ABI.
 
-A host directory can be selected with `--root PATH`. `--bin PATH NAME`
-loads a supported guest executable into the running system.
+The source job fails on unsupported constructs and uploads Bake diagnostics.
+It does not substitute a smaller kernel build or execute the OS in TypeScript.
+No generated whole-OS WAT or working WASM distribution is claimed yet. Booting
+with `.thistle.base`, reaching input and checking `/bin/dd` remain required
+acceptance checks once the OS ABI is available.
 
-Build and preview the static site:
-
-```sh
-bun run web
-bun run serve:web
-```
-
-Static files are written to `dist/web/`.
-
-The CLI initialises its writable root from `.thistle.base/`.
-The default shell is `/bin/thsh`; `/bin/bash` is an installed
-alternative. See [root image and userland](docs/userland.md).
-
-## Documentation
-
-- [Source module index](docs/index.md)
-- [System architecture](docs/architecture.md)
-- [Build and generated files](docs/build.md)
-- [Dependencies](docs/dependencies.md)
-- [Root image and userland](docs/userland.md)
-- [Static browser build](docs/web.md)
-- [Userland migration plan](docs/userland-migration.md)
-
-## Licence
-
-[MIT](LICENSE) for original code. Bundled software retains its upstream
-licences; see [third-party software](THIRD_PARTY.md).
-
-The RV64GC execution adapter calls the pinned Thistle native instruction core directly. The old locally implemented instruction decoder is removed; the host cannot select a second RV64GC engine. Host process, filesystem and syscall compatibility services still need migration to the upstream kernel boundary. This is an intermediate integration step, not complete kernel separation.
-
-## Canonical kernel
-
-The `mikuOS-Thistle` branch consumes `thistle` directly. Kernel mechanisms live in that pinned repository; mikuOS supplies its distribution and custom `.thistle.base` userland. See [the integration and boot checks](docs/canonical-kernel.md).
+Baguette, Bake, Thistle and the canonical mikuOS source remain immutable.
+Transpilation corrections belong in Leek. A demonstrated canonical source defect
+requires a separate `mikuOS-thistle` branch and its full CI.
